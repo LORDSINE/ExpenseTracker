@@ -275,6 +275,10 @@ def get_categories(transaction_type):
     else:
         return {'categories': EXPENSE_CATEGORIES}
 
+@app.route('/favicon.ico')
+def favicon():
+    return redirect(url_for('static', filename='favicon.ico'))
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()

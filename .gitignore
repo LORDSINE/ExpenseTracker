@@ -79,3 +79,6 @@ Thumbs.db
 
 # Vercel
 .vercel
+
+# Keep static assets
+!static/
