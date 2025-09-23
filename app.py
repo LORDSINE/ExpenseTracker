@@ -150,14 +150,6 @@ def health_check():
         'environment': 'vercel' if os.environ.get('VERCEL') else 'local'
     }
 
-@app.route('/test')
-def test_route():
-    """Test route for debugging"""
-    try:
-        return f"<h1>Flask Test Route</h1><p>Environment: {os.environ.get('VERCEL', 'local')}</p>"
-    except Exception as e:
-        return f"<h1>Error in test route</h1><p>{str(e)}</p>"
-
 @app.route('/init-db')
 def init_db_route():
     """Initialize database on demand"""
@@ -387,37 +379,6 @@ def logout():
     logout_user()
     flash('You have been logged out.', 'info')
     return redirect(url_for('login'))
-
-# Test route to check template loading
-@app.route('/test_template')
-def test_template():
-    """Test route to verify template loading"""
-    try:
-        # Try to render a simple test template
-        return """
-        <html>
-        <head>
-            <title>Template Test</title>
-            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-            <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-        </head>
-        <body>
-            <div class="container mt-5">
-                <div class="card">
-                    <div class="card-header bg-primary text-white">
-                        <h3><i class="fas fa-test"></i> Template Test</h3>
-                    </div>
-                    <div class="card-body">
-                        <p>If you can see this styled card, Bootstrap is working!</p>
-                        <a href="/add_transaction" class="btn btn-success">Go to Add Transaction</a>
-                    </div>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
-    except Exception as e:
-        return f"Test error: {str(e)}"
 
 @app.route('/add_transaction', methods=['GET', 'POST'])
 @login_required
