@@ -137,6 +137,53 @@ def handle_exception(e):
     return redirect(url_for('login'))
 
 # Routes
+@app.route('/health')
+def health_check():
+    """Simple health check that doesn't depend on database or auth"""
+    return {
+        'status': 'ok', 
+        'message': 'Flask app is running',
+        'environment': 'vercel' if os.environ.get('VERCEL') else 'local'
+    }
+
+@app.route('/test')
+def test_route():
+    """Test route for debugging"""
+    try:
+        return f"<h1>Flask Test Route</h1><p>Environment: {os.environ.get('VERCEL', 'local')}</p>"
+    except Exception as e:
+        return f"<h1>Error in test route</h1><p>{str(e)}</p>"
+
+@app.route('/init-db')
+def init_db_route():
+    """Initialize database on demand"""
+    try:
+        success = init_db()
+        if success:
+            return {"status": "success", "message": "Database initialized"}
+        else:
+            return {"status": "error", "message": "Failed to initialize database"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.route('/debug')
+def debug_info():
+    """Debug information route"""
+    try:
+        import sys
+        return {
+            "status": "ok",
+            "python_version": sys.version,
+            "flask_version": app.config.get('VERSION', 'unknown'),
+            "environment_vars": {
+                "VERCEL": os.environ.get('VERCEL', 'not set'),
+                "FLASK_ENV": os.environ.get('FLASK_ENV', 'not set')
+            },
+            "database_config": app.config.get('SQLALCHEMY_DATABASE_URI', 'not set')
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
@@ -213,6 +260,9 @@ def profile():
 def landing():
     """Landing page that redirects based on authentication status"""
     try:
+        # Ensure database is initialized
+        ensure_db()
+        
         if current_user.is_authenticated:
             return redirect(url_for('dashboard'))
         else:
@@ -225,6 +275,10 @@ def landing():
 @login_required
 def dashboard():
     try:
+        # Ensure database is initialized
+        if not ensure_db():
+            raise Exception("Database initialization failed")
+            
         # Get recent transactions for current user
         recent_transactions = Transaction.query.filter_by(user_id=current_user.id).order_by(Transaction.created_at.desc()).limit(10).all()
         
@@ -332,22 +386,32 @@ def get_categories(transaction_type):
 def favicon():
     return redirect(url_for('static', filename='favicon.ico'))
 
+# Database initialization function
+_db_initialized = False
+
+def ensure_db():
+    """Ensure database is initialized before use"""
+    global _db_initialized
+    if not _db_initialized:
+        try:
+            with app.app_context():
+                db.create_all()
+                _db_initialized = True
+                print("Database initialized on demand")
+        except Exception as e:
+            print(f"Error initializing database on demand: {str(e)}")
+    return _db_initialized
+
+def init_db():
+    """Initialize database tables if they don't exist"""
+    return ensure_db()
+
 if __name__ == '__main__':
-    try:
-        with app.app_context():
-            db.create_all()
-            print("Database initialized successfully")
-    except Exception as e:
-        print(f"Error initializing database: {str(e)}")
+    init_db()
     app.run()
 else:
-    # For serverless deployment (Vercel)
-    try:
-        with app.app_context():
-            db.create_all()
-            print("Serverless database initialized successfully")
-    except Exception as e:
-        print(f"Error initializing serverless database: {str(e)}")
+    # For serverless deployment (Vercel) - delay database initialization
+    pass
 
 # For Vercel deployment
 vercel_app = app
