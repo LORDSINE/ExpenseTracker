@@ -9,8 +9,16 @@ from datetime import datetime, date
 import os
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your-secret-key-here'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///expense_tracker.db'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-here')
+
+# Database configuration - use in-memory SQLite for Vercel
+if os.environ.get('VERCEL'):
+    # For Vercel deployment - use in-memory SQLite
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+else:
+    # For local development
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///expense_tracker.db'
+    
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -24,7 +32,11 @@ login_manager.login_message_category = 'info'
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    try:
+        return User.query.get(int(user_id))
+    except Exception as e:
+        print(f"Error loading user {user_id}: {str(e)}")
+        return None
 
 # Database Models
 class User(UserMixin, db.Model):
@@ -104,6 +116,26 @@ EXPENSE_CATEGORIES = [
     ('other_expense', 'Other Expense')
 ]
 
+# Error Handlers
+@app.errorhandler(500)
+def internal_error(error):
+    """Handle internal server errors"""
+    print(f"Internal server error: {str(error)}")
+    db.session.rollback()
+    return render_template('base.html'), 500
+
+@app.errorhandler(404)
+def not_found_error(error):
+    """Handle 404 errors"""
+    return redirect(url_for('login'))
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    """Handle all unhandled exceptions"""
+    print(f"Unhandled exception: {str(e)}")
+    db.session.rollback()
+    return redirect(url_for('login'))
+
 # Routes
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -178,21 +210,42 @@ def profile():
                          total_expense=total_expense)
 
 @app.route('/')
+def landing():
+    """Landing page that redirects based on authentication status"""
+    try:
+        if current_user.is_authenticated:
+            return redirect(url_for('dashboard'))
+        else:
+            return redirect(url_for('login'))
+    except Exception as e:
+        print(f"Error in landing route: {str(e)}")
+        return redirect(url_for('login'))
+
+@app.route('/dashboard')
 @login_required
-def index():
-    # Get recent transactions for current user
-    recent_transactions = Transaction.query.filter_by(user_id=current_user.id).order_by(Transaction.created_at.desc()).limit(10).all()
-    
-    # Calculate totals for current user
-    total_income = db.session.query(db.func.sum(Transaction.amount)).filter_by(user_id=current_user.id, type='income').scalar() or 0
-    total_expense = db.session.query(db.func.sum(Transaction.amount)).filter_by(user_id=current_user.id, type='expense').scalar() or 0
-    balance = total_income - total_expense
-    
-    return render_template('index.html', 
-                         transactions=recent_transactions,
-                         total_income=total_income,
-                         total_expense=total_expense,
-                         balance=balance)
+def dashboard():
+    try:
+        # Get recent transactions for current user
+        recent_transactions = Transaction.query.filter_by(user_id=current_user.id).order_by(Transaction.created_at.desc()).limit(10).all()
+        
+        # Calculate totals for current user
+        total_income = db.session.query(db.func.sum(Transaction.amount)).filter_by(user_id=current_user.id, type='income').scalar() or 0
+        total_expense = db.session.query(db.func.sum(Transaction.amount)).filter_by(user_id=current_user.id, type='expense').scalar() or 0
+        balance = total_income - total_expense
+        
+        return render_template('index.html', 
+                             transactions=recent_transactions,
+                             total_income=total_income,
+                             total_expense=total_expense,
+                             balance=balance)
+    except Exception as e:
+        print(f"Error in dashboard route: {str(e)}")
+        # Return a simple page if database operations fail
+        return render_template('index.html', 
+                             transactions=[],
+                             total_income=0,
+                             total_expense=0,
+                             balance=0)
 
 @app.route('/add_transaction', methods=['GET', 'POST'])
 @login_required
@@ -280,13 +333,21 @@ def favicon():
     return redirect(url_for('static', filename='favicon.ico'))
 
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
+    try:
+        with app.app_context():
+            db.create_all()
+            print("Database initialized successfully")
+    except Exception as e:
+        print(f"Error initializing database: {str(e)}")
     app.run()
 else:
     # For serverless deployment (Vercel)
-    with app.app_context():
-        db.create_all()
+    try:
+        with app.app_context():
+            db.create_all()
+            print("Serverless database initialized successfully")
+    except Exception as e:
+        print(f"Error initializing serverless database: {str(e)}")
 
 # For Vercel deployment
 vercel_app = app
