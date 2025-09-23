@@ -144,11 +144,8 @@ EXPENSE_CATEGORIES = [
 def internal_error(error):
     """Handle internal server errors"""
     print(f"Internal server error: {str(error)}")
-    try:
-        db.session.rollback()
-    except Exception as db_error:
-        print(f"Could not rollback database session: {str(db_error)}")
-    return "Internal Server Error", 500
+    db.session.rollback()
+    return render_template('base.html'), 500
 
 @app.errorhandler(404)
 def not_found_error(error):
@@ -213,74 +210,77 @@ def debug_info():
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
-# Simple login page that doesn't require database
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    """Simple login page"""
-    if request.method == 'POST':
-        try:
-            if not ensure_db():
-                flash('Database initialization failed', 'error')
-                return render_template('login.html', form=LoginForm())
-                
-            username = request.form.get('username')
-            password = request.form.get('password')
-            
-            user = User.query.filter_by(username=username).first()
-            
-            if user and bcrypt.check_password_hash(user.password_hash, password):
-                login_user(user)
-                return redirect(url_for('dashboard'))
-            else:
-                flash('Login failed. Please check your credentials.', 'danger')
-        except Exception as e:
-            print(f"Login error: {str(e)}")
-            flash('Login system error', 'error')
-    
-    return render_template('login.html', form=LoginForm())
-
-@app.route('/register', methods=['GET', 'POST'])  
+@app.route('/register', methods=['GET', 'POST'])
 def register():
-    """User registration"""
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    
     form = RegistrationForm()
     if form.validate_on_submit():
-        try:
-            if not ensure_db():
-                flash('Database initialization failed', 'error')
-                return render_template('register.html', form=form)
-                
-            # Check if user already exists
-            existing_user = User.query.filter(
-                (User.username == form.username.data) | 
-                (User.email == form.email.data)
-            ).first()
-            
-            if existing_user:
-                flash('Username or email already exists.', 'danger')
-                return render_template('register.html', form=form)
-            
-            # Create new user
-            hashed_password = bcrypt.generate_password_hash(form.password.data).decode('utf-8')
-            user = User(
-                first_name=form.first_name.data,
-                last_name=form.last_name.data,
-                username=form.username.data,
-                email=form.email.data,
-                password_hash=hashed_password
-            )
-            
-            db.session.add(user)
-            db.session.commit()
-            
-            flash('Registration successful! You can now log in.', 'success')
-            return redirect(url_for('login'))
-            
-        except Exception as e:
-            db.session.rollback()
-            print(f"Registration error: {str(e)}")
-            flash('Registration failed. Please try again.', 'danger')
+        # Check if username or email already exists
+        existing_user = User.query.filter((User.username == form.username.data) | 
+                                        (User.email == form.email.data)).first()
+        if existing_user:
+            flash('Username or email already exists. Please choose different ones.', 'danger')
+            return render_template('register.html', form=form)
+        
+        # Create new user
+        hashed_password = bcrypt.generate_password_hash(form.password.data).decode('utf-8')
+        user = User(
+            username=form.username.data,
+            email=form.email.data,
+            password_hash=hashed_password,
+            first_name=form.first_name.data,
+            last_name=form.last_name.data
+        )
+        db.session.add(user)
+        db.session.commit()
+        
+        flash(f'Account created for {form.username.data}! You can now log in.', 'success')
+        return redirect(url_for('login'))
     
     return render_template('register.html', form=form)
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    
+    form = LoginForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(username=form.username.data).first()
+        if user and bcrypt.check_password_hash(user.password_hash, form.password.data):
+            login_user(user)
+            next_page = request.args.get('next')
+            flash(f'Welcome back, {user.first_name}!', 'success')
+            return redirect(next_page) if next_page else redirect(url_for('index'))
+        else:
+            flash('Login unsuccessful. Please check username and password.', 'danger')
+    
+    return render_template('login.html', form=form)
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    flash('You have been logged out.', 'info')
+    return redirect(url_for('login'))
+
+@app.route('/profile')
+@login_required
+def profile():
+    # Get user statistics
+    total_transactions = Transaction.query.filter_by(user_id=current_user.id).count()
+    total_income = db.session.query(db.func.sum(Transaction.amount)).filter_by(
+        user_id=current_user.id, type='income').scalar() or 0
+    total_expense = db.session.query(db.func.sum(Transaction.amount)).filter_by(
+        user_id=current_user.id, type='expense').scalar() or 0
+    
+    return render_template('profile.html', 
+                         user=current_user,
+                         total_transactions=total_transactions,
+                         total_income=total_income,
+                         total_expense=total_expense)
 
 @app.route('/')
 def landing():
@@ -332,12 +332,86 @@ def dashboard():
                              total_expense=0,
                              balance=0)
 
-@app.route('/logout')
+@app.route('/add_transaction', methods=['GET', 'POST'])
 @login_required
-def logout():
-    logout_user()
-    flash('You have been logged out.', 'info')
-    return redirect(url_for('login'))
+def add_transaction():
+    form = TransactionForm()
+    
+    # Set categories based on transaction type
+    if request.method == 'POST' and form.type.data:
+        if form.type.data == 'income':
+            form.category.choices = INCOME_CATEGORIES
+        else:
+            form.category.choices = EXPENSE_CATEGORIES
+    else:
+        form.category.choices = EXPENSE_CATEGORIES  # Default to expense categories
+    
+    if form.validate_on_submit():
+        transaction = Transaction(
+            type=form.type.data,
+            amount=form.amount.data,
+            category=form.category.data,
+            description=form.description.data,
+            date=form.date.data,
+            user_id=current_user.id
+        )
+        db.session.add(transaction)
+        db.session.commit()
+        flash(f'{form.type.data.title()} of ${form.amount.data:.2f} added successfully!', 'success')
+        return redirect(url_for('index'))
+    
+    return render_template('add_transaction.html', form=form)
+
+@app.route('/transactions')
+@login_required
+def transactions():
+    page = request.args.get('page', 1, type=int)
+    transactions = Transaction.query.filter_by(user_id=current_user.id).order_by(Transaction.created_at.desc()).paginate(
+        page=page, per_page=20, error_out=False)
+    return render_template('transactions.html', transactions=transactions)
+
+@app.route('/analytics')
+@login_required
+def analytics():
+    # Income by category for current user
+    income_by_category = db.session.query(
+        Transaction.category, 
+        db.func.sum(Transaction.amount).label('total')
+    ).filter_by(user_id=current_user.id, type='income').group_by(Transaction.category).all()
+    
+    # Expense by category for current user
+    expense_by_category = db.session.query(
+        Transaction.category, 
+        db.func.sum(Transaction.amount).label('total')
+    ).filter_by(user_id=current_user.id, type='expense').group_by(Transaction.category).all()
+    
+    # Monthly trends (last 12 months) for current user
+    monthly_data = db.session.query(
+        db.func.strftime('%Y-%m', Transaction.date).label('month'),
+        Transaction.type,
+        db.func.sum(Transaction.amount).label('total')
+    ).filter_by(user_id=current_user.id).group_by('month', Transaction.type).order_by('month').all()
+    
+    return render_template('analytics.html',
+                         income_by_category=income_by_category,
+                         expense_by_category=expense_by_category,
+                         monthly_data=monthly_data)
+
+@app.route('/delete_transaction/<int:id>')
+@login_required
+def delete_transaction(id):
+    transaction = Transaction.query.filter_by(id=id, user_id=current_user.id).first_or_404()
+    db.session.delete(transaction)
+    db.session.commit()
+    flash('Transaction deleted successfully!', 'success')
+    return redirect(url_for('transactions'))
+
+@app.route('/get_categories/<transaction_type>')
+def get_categories(transaction_type):
+    if transaction_type == 'income':
+        return {'categories': INCOME_CATEGORIES}
+    else:
+        return {'categories': EXPENSE_CATEGORIES}
 
 @app.route('/favicon.ico')
 def favicon():
