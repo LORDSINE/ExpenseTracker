@@ -2,9 +2,6 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_bcrypt import Bcrypt
-from flask_wtf import FlaskForm
-from wtforms import StringField, FloatField, SelectField, DateField, TextAreaField, SubmitField, PasswordField
-from wtforms.validators import DataRequired, NumberRange, Email, Length, EqualTo
 from datetime import datetime, date
 import os
 
@@ -91,30 +88,6 @@ class Transaction(db.Model):
 
     def __repr__(self):
         return f'<Transaction {self.type}: {self.amount}>'
-
-# Forms
-class RegistrationForm(FlaskForm):
-    first_name = StringField('First Name', validators=[DataRequired(), Length(min=2, max=50)])
-    last_name = StringField('Last Name', validators=[DataRequired(), Length(min=2, max=50)])
-    username = StringField('Username', validators=[DataRequired(), Length(min=4, max=20)])
-    email = StringField('Email', validators=[DataRequired(), Email()])
-    password = PasswordField('Password', validators=[DataRequired(), Length(min=6)])
-    confirm_password = PasswordField('Confirm Password', 
-                                   validators=[DataRequired(), EqualTo('password')])
-    submit = SubmitField('Sign Up')
-
-class LoginForm(FlaskForm):
-    username = StringField('Username', validators=[DataRequired()])
-    password = PasswordField('Password', validators=[DataRequired()])
-    submit = SubmitField('Log In')
-
-class TransactionForm(FlaskForm):
-    type = SelectField('Type', choices=[('income', 'Income'), ('expense', 'Expense')], validators=[DataRequired()])
-    amount = FloatField('Amount', validators=[DataRequired(), NumberRange(min=0.01)])
-    category = SelectField('Category', choices=[], validators=[DataRequired()])
-    description = TextAreaField('Description')
-    date = DateField('Date', validators=[DataRequired()], default=date.today)
-    submit = SubmitField('Add Transaction')
 
 # Categories for different transaction types
 INCOME_CATEGORIES = [
@@ -217,70 +190,144 @@ def debug_info():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     """Simple login page"""
-    if request.method == 'POST':
-        try:
-            if not ensure_db():
-                flash('Database initialization failed', 'error')
-                return render_template('login.html', form=LoginForm())
+    try:
+        if request.method == 'POST':
+            try:
+                if not ensure_db():
+                    return "<h1>Database Error</h1><p>Could not initialize database</p><a href='/login'>Try Again</a>"
+                    
+                username = request.form.get('username')
+                password = request.form.get('password')
                 
-            username = request.form.get('username')
-            password = request.form.get('password')
-            
-            user = User.query.filter_by(username=username).first()
-            
-            if user and bcrypt.check_password_hash(user.password_hash, password):
-                login_user(user)
-                return redirect(url_for('dashboard'))
-            else:
-                flash('Login failed. Please check your credentials.', 'danger')
-        except Exception as e:
-            print(f"Login error: {str(e)}")
-            flash('Login system error', 'error')
+                user = User.query.filter_by(username=username).first()
+                
+                if user and bcrypt.check_password_hash(user.password_hash, password):
+                    login_user(user)
+                    return redirect(url_for('dashboard'))
+                else:
+                    return "<h1>Login Failed</h1><p>Invalid credentials</p><a href='/login'>Try Again</a>"
+            except Exception as e:
+                return f"<h1>Login Error</h1><p>{str(e)}</p><a href='/login'>Try Again</a>"
+        
+        # Try to render template, fallback to plain HTML if it fails
+        try:
+            return render_template('login.html')
+        except:
+            return """
+            <html>
+            <head><title>Login - Expense Tracker</title></head>
+            <body>
+                <h1>Login</h1>
+                <form method="POST">
+                    <p>
+                        <label>Username:</label><br>
+                        <input type="text" name="username" required>
+                    </p>
+                    <p>
+                        <label>Password:</label><br>
+                        <input type="password" name="password" required>
+                    </p>
+                    <p>
+                        <input type="submit" value="Log In">
+                    </p>
+                </form>
+                <p><a href="/register">Don't have an account? Sign up</a></p>
+            </body>
+            </html>
+            """
     
-    return render_template('login.html', form=LoginForm())
+    except Exception as e:
+        # Fallback to simple HTML form if template fails
+        return f"""
+        <html>
+        <head><title>Login - Expense Tracker</title></head>
+        <body>
+            <h1>Login</h1>
+            <p>Error: {str(e)}</p>
+            <form method="POST">
+                <p>Username: <input type="text" name="username" required></p>
+                <p>Password: <input type="password" name="password" required></p>
+                <p><input type="submit" value="Login"></p>
+            </form>
+            <p><a href="/register">Register</a></p>
+        </body>
+        </html>
+        """
 
 @app.route('/register', methods=['GET', 'POST'])  
 def register():
     """User registration"""
-    form = RegistrationForm()
-    if form.validate_on_submit():
-        try:
-            if not ensure_db():
-                flash('Database initialization failed', 'error')
-                return render_template('register.html', form=form)
+    try:
+        if request.method == 'POST':
+            try:
+                if not ensure_db():
+                    return "<h1>Database Error</h1><p>Could not initialize database</p><a href='/register'>Try Again</a>"
                 
-            # Check if user already exists
-            existing_user = User.query.filter(
-                (User.username == form.username.data) | 
-                (User.email == form.email.data)
-            ).first()
-            
-            if existing_user:
-                flash('Username or email already exists.', 'danger')
-                return render_template('register.html', form=form)
-            
-            # Create new user
-            hashed_password = bcrypt.generate_password_hash(form.password.data).decode('utf-8')
-            user = User(
-                first_name=form.first_name.data,
-                last_name=form.last_name.data,
-                username=form.username.data,
-                email=form.email.data,
-                password_hash=hashed_password
-            )
-            
-            db.session.add(user)
-            db.session.commit()
-            
-            flash('Registration successful! You can now log in.', 'success')
-            return redirect(url_for('login'))
-            
-        except Exception as e:
-            db.session.rollback()
-            print(f"Registration error: {str(e)}")
-            flash('Registration failed. Please try again.', 'danger')
+                # Get form data directly
+                first_name = request.form.get('first_name')
+                last_name = request.form.get('last_name')
+                username = request.form.get('username')
+                email = request.form.get('email')
+                password = request.form.get('password')
+                
+                if not all([first_name, last_name, username, email, password]):
+                    return "<h1>Registration Error</h1><p>All fields are required</p><a href='/register'>Try Again</a>"
+                
+                # Check if user already exists
+                existing_user = User.query.filter(
+                    (User.username == username) | 
+                    (User.email == email)
+                ).first()
+                
+                if existing_user:
+                    return "<h1>Registration Error</h1><p>Username or email already exists</p><a href='/register'>Try Again</a>"
+                
+                # Create new user
+                hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
+                user = User(
+                    first_name=first_name,
+                    last_name=last_name,
+                    username=username,
+                    email=email,
+                    password_hash=hashed_password
+                )
+                
+                db.session.add(user)
+                db.session.commit()
+                
+                return "<h1>Success!</h1><p>Registration successful!</p><a href='/login'>Login Now</a>"
+                
+            except Exception as e:
+                try:
+                    db.session.rollback()
+                except:
+                    pass
+                return f"<h1>Registration Error</h1><p>{str(e)}</p><a href='/register'>Try Again</a>"
+        
+        # Try to render template, fallback to simple HTML
+        try:
+            return render_template('register.html')
+        except Exception as template_error:
+            return """
+            <html>
+            <head><title>Register - Expense Tracker</title></head>
+            <body>
+                <h1>Register</h1>
+                <form method="POST">
+                    <p>First Name: <input type="text" name="first_name" required></p>
+                    <p>Last Name: <input type="text" name="last_name" required></p>
+                    <p>Username: <input type="text" name="username" required></p>
+                    <p>Email: <input type="email" name="email" required></p>
+                    <p>Password: <input type="password" name="password" required></p>
+                    <p><input type="submit" value="Register"></p>
+                </form>
+                <p><a href="/login">Already have an account? Login</a></p>
+            </body>
+            </html>
+            """
     
-    return render_template('register.html', form=form)
+    except Exception as e:
+        return f"<h1>System Error</h1><p>{str(e)}</p><a href='/'>Home</a>"
 
 @app.route('/')
 def landing():
