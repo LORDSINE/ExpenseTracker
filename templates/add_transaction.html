@@ -3,51 +3,137 @@
 {% block title %}Add Transaction - Expense Tracker{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-md-8 mx-auto">
-        <div class="card">
-            <div class="card-header">
-                <h4 class="mb-0">
-                    <i class="fas fa-plus"></i> Add New Transaction
-                </h4>
-            </div>
-            <div class="card-body">
-                <form method="POST" id="transactionForm">
-                    {{ form.hidden_tag() }}
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                {{ form.type.label(class="form-label") }}
-                                {{ form.type(class="form-select", id="transactionType") }}
-                                {% if form.type.errors %}
-                                    <div class="text-danger">
-                                        {% for error in form.type.errors %}
-                                            <small>{{ error }}</small>
-                                        {% endfor %}
-                                    </div>
-                                {% endif %}
+<!-- Template Updated: 2025-09-23 14:30 -->
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white text-center">
+                    <h2 class="mb-1">
+                        <i class="fas fa-plus-circle me-2"></i>Add New Transaction
+                    </h2>
+                    <p class="mb-0 opacity-75">Track your income and expenses</p>
+                </div>
+                <div class="card-body p-4">
+                    <form method="POST" id="transactionForm">
+                        <!-- Transaction Type and Amount Row -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="type" class="form-label fw-bold">
+                                    <i class="fas fa-exchange-alt text-primary me-2"></i>Transaction Type
+                                </label>
+                                <select name="type" id="type" class="form-select form-select-lg" required>
+                                    <option value="">Choose Type...</option>
+                                    <option value="income">💰 Income</option>
+                                    <option value="expense">💸 Expense</option>
+                                </select>
                             </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                {{ form.amount.label(class="form-label") }}
-                                <div class="input-group">
+                            <div class="col-md-6">
+                                <label for="amount" class="form-label fw-bold">
+                                    <i class="fas fa-dollar-sign text-success me-2"></i>Amount
+                                </label>
+                                <div class="input-group input-group-lg">
                                     <span class="input-group-text">$</span>
-                                    {{ form.amount(class="form-control", step="0.01", placeholder="0.00") }}
+                                    <input type="number" name="amount" id="amount" class="form-control" 
+                                           step="0.01" min="0.01" placeholder="0.00" required>
                                 </div>
-                                {% if form.amount.errors %}
-                                    <div class="text-danger">
-                                        {% for error in form.amount.errors %}
-                                            <small>{{ error }}</small>
-                                        {% endfor %}
-                                    </div>
-                                {% endif %}
                             </div>
                         </div>
-                    </div>
 
-                    <div class="row">
+                        <!-- Category -->
+                        <div class="mb-3">
+                            <label for="category" class="form-label fw-bold">
+                                <i class="fas fa-tags text-info me-2"></i>Category
+                            </label>
+                            <select name="category" id="category" class="form-select form-select-lg" required>
+                                <option value="">Select Category...</option>
+                                <!-- Income categories -->
+                                <optgroup label="💰 Income Categories" id="income-categories" style="display: none;">
+                                    {% for value, label in income_categories %}
+                                    <option value="{{ value }}">{{ label }}</option>
+                                    {% endfor %}
+                                </optgroup>
+                                <!-- Expense categories -->
+                                <optgroup label="💸 Expense Categories" id="expense-categories" style="display: none;">
+                                    {% for value, label in expense_categories %}
+                                    <option value="{{ value }}">{{ label }}</option>
+                                    {% endfor %}
+                                </optgroup>
+                            </select>
+                        </div>
+
+                        <!-- Description -->
+                        <div class="mb-3">
+                            <label for="description" class="form-label fw-bold">
+                                <i class="fas fa-sticky-note text-warning me-2"></i>Description 
+                                <small class="text-muted fw-normal">(Optional)</small>
+                            </label>
+                            <textarea name="description" id="description" class="form-control" 
+                                      rows="3" placeholder="Enter transaction details..."></textarea>
+                        </div>
+
+                        <!-- Date -->
+                        <div class="mb-4">
+                            <label for="date" class="form-label fw-bold">
+                                <i class="fas fa-calendar-alt text-danger me-2"></i>Date
+                            </label>
+                            <input type="date" name="date" id="date" class="form-control form-control-lg" required>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="d-grid gap-2 mb-3">
+                            <button type="submit" class="btn btn-success btn-lg py-3">
+                                <i class="fas fa-plus-circle me-2"></i>Add Transaction
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <!-- Back Button -->
+                    <div class="text-center">
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary btn-lg">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Add Transaction page loaded with styling');
+    
+    const typeSelect = document.getElementById('type');
+    const categorySelect = document.getElementById('category');
+    const incomeCategories = document.getElementById('income-categories');
+    const expenseCategories = document.getElementById('expense-categories');
+    
+    // Set today's date as default
+    const dateInput = document.getElementById('date');
+    const today = new Date().toISOString().split('T')[0];
+    dateInput.value = today;
+    
+    typeSelect.addEventListener('change', function() {
+        console.log('Transaction type changed to:', this.value);
+        
+        // Clear current category selection
+        categorySelect.value = '';
+        
+        // Hide all category groups
+        incomeCategories.style.display = 'none';
+        expenseCategories.style.display = 'none';
+        
+        // Show relevant category group
+        if (this.value === 'income') {
+            incomeCategories.style.display = 'block';
+        } else if (this.value === 'expense') {
+            expenseCategories.style.display = 'block';
+        }
+    });
+});
+</script>
+{% endblock %}
                         <div class="col-md-6">
                             <div class="mb-3">
                                 {{ form.category.label(class="form-label") }}

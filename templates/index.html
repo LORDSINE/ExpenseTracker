@@ -3,31 +3,52 @@
 {% block title %}Dashboard - Expense Tracker{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-md-12">
-        <h1 class="mb-4">Financial Dashboard</h1>
+<div class="main-content">
+    <div class="dashboard-header">
+        <h1><i class="fas fa-chart-line icon"></i>Financial Dashboard</h1>
     </div>
-</div>
-
-<!-- Summary Cards -->
-<div class="row mb-4">
-    <div class="col-md-4">
-        <div class="card text-white bg-success">
-            <div class="card-header">
-                <i class="fas fa-arrow-up"></i> Total Income
+    
+    <div class="container p-4">
+        <!-- Summary Cards -->
+        <div class="stats-grid">
+            <div class="card bg-success text-white">
+                <div class="card-header">
+                    <i class="fas fa-arrow-up icon"></i>Total Income
+                </div>
+                <div class="card-body">
+                    <h4 class="card-title">${{ "%.2f"|format(total_income) }}</h4>
+                </div>
             </div>
-            <div class="card-body">
-                <h4 class="card-title">${{ "%.2f"|format(total_income) }}</h4>
+            <div class="card bg-danger text-white">
+                <div class="card-header">
+                    <i class="fas fa-arrow-down icon"></i>Total Expenses
+                </div>
+                <div class="card-body">
+                    <h4 class="card-title">${{ "%.2f"|format(total_expense) }}</h4>
+                </div>
+            </div>
+            <div class="card bg-primary text-white">
+                <div class="card-header">
+                    <i class="fas fa-wallet icon"></i>Current Balance
+                </div>
+                <div class="card-body">
+                    <h4 class="card-title">${{ "%.2f"|format(balance) }}</h4>
+                </div>
             </div>
         </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card text-white bg-danger">
-            <div class="card-header">
-                <i class="fas fa-arrow-down"></i> Total Expenses
-            </div>
-            <div class="card-body">
-                <h4 class="card-title">${{ "%.2f"|format(total_expense) }}</h4>
+
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+            <a href="{{ url_for('add_transaction') }}" class="btn btn-success">
+                <i class="fas fa-plus icon"></i>Add Transaction
+            </a>
+            <a href="{{ url_for('transactions') }}" class="btn btn-secondary">
+                <i class="fas fa-list icon"></i>View All Transactions
+            </a>
+            <a href="{{ url_for('analytics') }}" class="btn btn-primary">
+                <i class="fas fa-chart-bar icon"></i>View Analytics
+            </a>
+        </div>
             </div>
         </div>
     </div>

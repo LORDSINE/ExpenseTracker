@@ -3,51 +3,101 @@
 {% block title %}Profile - Expense Tracker{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-md-8 mx-auto">
-        <div class="card">
-            <div class="card-header">
-                <h4 class="mb-0">
-                    <i class="fas fa-user-circle"></i> User Profile
-                </h4>
+<div class="container">
+    <div class="profile-section">
+        <div class="profile-container">
+            <div class="profile-header">
+                <div class="profile-avatar">
+                    <i class="fas fa-user-circle"></i>
+                </div>
+                <div class="profile-info">
+                    <h1 style="margin: 0; color: #2c3e50;">{{ user.first_name }} {{ user.last_name }}</h1>
+                    <p style="margin: 0.5rem 0 0 0; opacity: 0.9;">
+                        <i class="fas fa-user icon"></i>{{ user.username }}
+                    </p>
+                    <p style="margin: 0.5rem 0 0 0; opacity: 0.9;">
+                        <i class="fas fa-envelope icon"></i>{{ user.email }}
+                    </p>
+                    <p style="margin: 0.5rem 0 0 0; opacity: 0.7; font-size: 0.9rem;">
+                        <i class="fas fa-calendar-alt icon"></i>Member since {{ user.created_at.strftime('%B %Y') if user.created_at else 'Recently' }}
+                    </p>
+                </div>
             </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <h5>Personal Information</h5>
-                        <table class="table table-borderless">
-                            <tr>
-                                <td><strong>Name:</strong></td>
-                                <td>{{ user.first_name }} {{ user.last_name }}</td>
-                            </tr>
-                            <tr>
-                                <td><strong>Username:</strong></td>
-                                <td>{{ user.username }}</td>
-                            </tr>
-                            <tr>
-                                <td><strong>Email:</strong></td>
-                                <td>{{ user.email }}</td>
-                            </tr>
-                            <tr>
-                                <td><strong>Member Since:</strong></td>
-                                <td>{{ user.created_at.strftime('%B %d, %Y') }}</td>
-                            </tr>
-                        </table>
+
+            <div class="profile-stats">
+                <div class="stat-card">
+                    <div class="stat-icon">📊</div>
+                    <div class="stat-info">
+                        <h3>{{ total_transactions }}</h3>
+                        <p>Total Transactions</p>
                     </div>
-                    <div class="col-md-6">
-                        <h5>Account Statistics</h5>
-                        <div class="row">
-                            <div class="col-12 mb-3">
-                                <div class="card bg-light">
-                                    <div class="card-body text-center">
-                                        <h3 class="text-primary">{{ total_transactions }}</h3>
-                                        <p class="mb-0">Total Transactions</p>
-                                    </div>
-                                </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon income">💰</div>
+                    <div class="stat-info">
+                        <h3>${{ "%.2f"|format(total_income) }}</h3>
+                        <p>Total Income</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon expense">💸</div>
+                    <div class="stat-info">
+                        <h3>${{ "%.2f"|format(total_expense) }}</h3>
+                        <p>Total Expenses</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon {{ 'positive' if (total_income - total_expense) >= 0 else 'negative' }}">
+                        {{ '📈' if (total_income - total_expense) >= 0 else '📉' }}
+                    </div>
+                    <div class="stat-info">
+                        <h3>${{ "%.2f"|format(total_income - total_expense) }}</h3>
+                        <p>Net Balance</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="profile-actions">
+                <div class="action-group">
+                    <h3 style="margin: 0 0 1rem 0; color: #2c3e50; font-size: 1.1rem;">
+                        <i class="fas fa-chart-bar icon"></i>Quick Actions
+                    </h3>
+                    <div class="action-buttons">
+                        <a href="{{ url_for('dashboard') }}" class="action-btn primary">
+                            <i class="fas fa-tachometer-alt icon"></i>
+                            <div>
+                                <strong>Dashboard</strong>
+                                <small>View financial overview</small>
                             </div>
-                            <div class="col-6 mb-3">
-                                <div class="card bg-success text-white">
-                                    <div class="card-body text-center">
+                        </a>
+                        <a href="{{ url_for('add_transaction') }}" class="action-btn success">
+                            <i class="fas fa-plus icon"></i>
+                            <div>
+                                <strong>Add Transaction</strong>
+                                <small>Record income or expense</small>
+                            </div>
+                        </a>
+                        <a href="{{ url_for('transactions') }}" class="action-btn info">
+                            <i class="fas fa-list icon"></i>
+                            <div>
+                                <strong>View Transactions</strong>
+                                <small>Browse transaction history</small>
+                            </div>
+                        </a>
+                        <a href="{{ url_for('logout') }}" class="action-btn warning" onclick="return confirm('Are you sure you want to logout?')">
+                            <i class="fas fa-sign-out-alt icon"></i>
+                            <div>
+                                <strong>Logout</strong>
+                                <small>Sign out of your account</small>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
                                         <h5>${{ "%.2f"|format(total_income) }}</h5>
                                         <p class="mb-0">Total Income</p>
                                     </div>
