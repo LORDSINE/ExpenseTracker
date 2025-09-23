@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Expense Tracker{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h1 class="mb-4">Financial Dashboard</h1>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card text-white bg-success">
+            <div class="card-header">
+                <i class="fas fa-arrow-up"></i> Total Income
+            </div>
+            <div class="card-body">
+                <h4 class="card-title">${{ "%.2f"|format(total_income) }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-danger">
+            <div class="card-header">
+                <i class="fas fa-arrow-down"></i> Total Expenses
+            </div>
+            <div class="card-body">
+                <h4 class="card-title">${{ "%.2f"|format(total_expense) }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white {% if balance >= 0 %}bg-success{% else %}bg-danger{% endif %}">
+            <div class="card-header">
+                <i class="fas fa-balance-scale"></i> Balance
+            </div>
+            <div class="card-body">
+                <h4 class="card-title">${{ "%.2f"|format(balance) }}</h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <a href="{{ url_for('add_transaction') }}" class="btn btn-primary me-2">
+                    <i class="fas fa-plus"></i> Add Transaction
+                </a>
+                <a href="{{ url_for('transactions') }}" class="btn btn-secondary me-2">
+                    <i class="fas fa-list"></i> View All Transactions
+                </a>
+                <a href="{{ url_for('analytics') }}" class="btn btn-info">
+                    <i class="fas fa-chart-bar"></i> View Analytics
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Transactions -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Recent Transactions</h5>
+                <a href="{{ url_for('transactions') }}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body">
+                {% if transactions %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th>Category</th>
+                                    <th>Description</th>
+                                    <th>Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for transaction in transactions %}
+                                <tr>
+                                    <td>{{ transaction.date.strftime('%Y-%m-%d') }}</td>
+                                    <td>
+                                        <span class="badge {% if transaction.type == 'income' %}bg-success{% else %}bg-danger{% endif %}">
+                                            {{ transaction.type.title() }}
+                                        </span>
+                                    </td>
+                                    <td>{{ transaction.category.replace('_', ' ').title() }}</td>
+                                    <td>{{ transaction.description or '-' }}</td>
+                                    <td class="{% if transaction.type == 'income' %}income{% else %}expense{% endif %}">
+                                        {% if transaction.type == 'income' %}+{% else %}-{% endif %}${{ "%.2f"|format(transaction.amount) }}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-receipt fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No transactions yet</h5>
+                        <p class="text-muted">Start by adding your first income or expense transaction.</p>
+                        <a href="{{ url_for('add_transaction') }}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Add Your First Transaction
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

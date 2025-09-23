@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}Add Transaction - Expense Tracker{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-plus"></i> Add New Transaction
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="transactionForm">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form.type.label(class="form-label") }}
+                                {{ form.type(class="form-select", id="transactionType") }}
+                                {% if form.type.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.type.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form.amount.label(class="form-label") }}
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    {{ form.amount(class="form-control", step="0.01", placeholder="0.00") }}
+                                </div>
+                                {% if form.amount.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.amount.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form.category.label(class="form-label") }}
+                                {{ form.category(class="form-select", id="categorySelect") }}
+                                {% if form.category.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.category.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form.date.label(class="form-label") }}
+                                {{ form.date(class="form-control") }}
+                                {% if form.date.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.date.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.description.label(class="form-label") }}
+                        {{ form.description(class="form-control", rows="3", placeholder="Optional description...") }}
+                        {% if form.description.errors %}
+                            <div class="text-danger">
+                                {% for error in form.description.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('index') }}" class="btn btn-secondary me-md-2">Cancel</a>
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const typeSelect = document.getElementById('transactionType');
+    const categorySelect = document.getElementById('categorySelect');
+    
+    // Define categories for each transaction type
+    const categories = {
+        'income': [
+            ['salary', 'Salary'],
+            ['freelance', 'Freelance'],
+            ['investment', 'Investment'],
+            ['business', 'Business'],
+            ['gift', 'Gift'],
+            ['other_income', 'Other Income']
+        ],
+        'expense': [
+            ['food', 'Food & Dining'],
+            ['transportation', 'Transportation'],
+            ['shopping', 'Shopping'],
+            ['entertainment', 'Entertainment'],
+            ['bills', 'Bills & Utilities'],
+            ['healthcare', 'Healthcare'],
+            ['education', 'Education'],
+            ['travel', 'Travel'],
+            ['housing', 'Housing'],
+            ['other_expense', 'Other Expense']
+        ]
+    };
+    
+    function updateCategories() {
+        const selectedType = typeSelect.value;
+        const categoryOptions = categories[selectedType] || categories['expense'];
+        
+        // Clear existing options
+        categorySelect.innerHTML = '';
+        
+        // Add new options
+        categoryOptions.forEach(function(category) {
+            const option = document.createElement('option');
+            option.value = category[0];
+            option.textContent = category[1];
+            categorySelect.appendChild(option);
+        });
+    }
+    
+    // Update categories when transaction type changes
+    typeSelect.addEventListener('change', updateCategories);
+    
+    // Initialize categories on page load
+    updateCategories();
+    
+    // Form validation
+    document.getElementById('transactionForm').addEventListener('submit', function(e) {
+        const amount = parseFloat(document.getElementById('amount').value);
+        if (amount <= 0) {
+            e.preventDefault();
+            alert('Please enter a valid amount greater than 0.');
+        }
+    });
+});
+</script>
+{% endblock %}
