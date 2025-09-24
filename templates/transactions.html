@@ -64,7 +64,7 @@
                         </td>
                         <td class="amount-cell">
                             <span class="amount {{ transaction.type }}">
-                                {% if transaction.type == 'income' %}+{% else %}-{% endif %}${{ "%.2f"|format(transaction.amount) }}
+                                {% if transaction.type == 'income' %}+{% else %}-{% endif %}Rs.{{ "%.2f"|format(transaction.amount) }}
                             </span>
                         </td>
                     </tr>

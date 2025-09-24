@@ -33,7 +33,7 @@
                                 {% for category, total in income_by_category %}
                                 <tr>
                                     <td>{{ category.replace('_', ' ').title() }}</td>
-                                    <td class="income">${{ "%.2f"|format(total) }}</td>
+                                    <td class="income">Rs.{{ "%.2f"|format(total) }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -67,7 +67,7 @@
                                 {% for category, total in expense_by_category %}
                                 <tr>
                                     <td>{{ category.replace('_', ' ').title() }}</td>
-                                    <td class="expense">${{ "%.2f"|format(total) }}</td>
+                                    <td class="expense">Rs.{{ "%.2f"|format(total) }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -199,7 +199,7 @@ new Chart(monthlyCtx, {
                 beginAtZero: true,
                 ticks: {
                     callback: function(value) {
-                        return '$' + value.toFixed(2);
+                        return 'Rs.' + value.toFixed(2);
                     }
                 }
             }

@@ -35,14 +35,14 @@
                 <div class="stat-card">
                     <div class="stat-icon income">💰</div>
                     <div class="stat-info">
-                        <h3>${{ "%.2f"|format(total_income) }}</h3>
+                        <h3>Rs.{{ "%.2f"|format(total_income) }}</h3>
                         <p>Total Income</p>
                     </div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon expense">💸</div>
                     <div class="stat-info">
-                        <h3>${{ "%.2f"|format(total_expense) }}</h3>
+                        <h3>Rs.{{ "%.2f"|format(total_expense) }}</h3>
                         <p>Total Expenses</p>
                     </div>
                 </div>
@@ -51,7 +51,7 @@
                         {{ '📈' if (total_income - total_expense) >= 0 else '📉' }}
                     </div>
                     <div class="stat-info">
-                        <h3>${{ "%.2f"|format(total_income - total_expense) }}</h3>
+                        <h3>Rs.{{ "%.2f"|format(total_income - total_expense) }}</h3>
                         <p>Net Balance</p>
                     </div>
                 </div>
@@ -98,7 +98,7 @@
     </div>
 </div>
 {% endblock %}
-                                        <h5>${{ "%.2f"|format(total_income) }}</h5>
+                                        <h5>Rs.{{ "%.2f"|format(total_income) }}</h5>
                                         <p class="mb-0">Total Income</p>
                                     </div>
                                 </div>

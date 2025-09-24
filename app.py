@@ -4,6 +4,7 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from flask_bcrypt import Bcrypt
 from datetime import datetime, date
 import os
+import time
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-here')
@@ -128,7 +129,9 @@ def internal_error(error):
 @app.errorhandler(404)
 def not_found_error(error):
     """Handle 404 errors"""
-    return redirect(url_for('login'))
+    return render_template('404.html', 
+                         cache_buster=int(time.time()),
+                         current_year=datetime.now().year), 404
 
 @app.errorhandler(Exception)
 def handle_exception(e):
@@ -484,7 +487,7 @@ def add_transaction():
                                                 <i class="fas fa-dollar-sign text-success me-2"></i>Amount
                                             </label>
                                             <div class="input-group input-group-lg">
-                                                <span class="input-group-text">$</span>
+                                                <span class="input-group-text">Rs.</span>
                                                 <input type="number" name="amount" id="amount" class="form-control" 
                                                        step="0.01" min="0.01" placeholder="0.00" required>
                                             </div>
@@ -617,7 +620,7 @@ def transactions():
                 <td><i class="fas {type_icon} me-2"></i>{t.type.title()}</td>
                 <td>{t.category.replace('_', ' ').title()}</td>
                 <td>{t.description or '-'}</td>
-                <td class="{amount_class} fw-bold">{amount_sign}${t.amount:.2f}</td>
+                <td class="{amount_class} fw-bold">{amount_sign}Rs.{t.amount:.2f}</td>
             </tr>
             """
         
@@ -667,7 +670,7 @@ def transactions():
                             <div class="col-md-4">
                                 <div class="card bg-success text-white">
                                     <div class="card-body text-center">
-                                        <h4>💰 ${total_income:.2f}</h4>
+                                        <h4>💰 Rs.{total_income:.2f}</h4>
                                         <p class="mb-0">Total Income</p>
                                     </div>
                                 </div>
@@ -675,7 +678,7 @@ def transactions():
                             <div class="col-md-4">
                                 <div class="card bg-danger text-white">
                                     <div class="card-body text-center">
-                                        <h4>💸 ${total_expenses:.2f}</h4>
+                                        <h4>💸 Rs.{total_expenses:.2f}</h4>
                                         <p class="mb-0">Total Expenses</p>
                                     </div>
                                 </div>
@@ -683,7 +686,7 @@ def transactions():
                             <div class="col-md-4">
                                 <div class="card {'bg-success' if net_income >= 0 else 'bg-warning'} text-white">
                                     <div class="card-body text-center">
-                                        <h4>{'📈' if net_income >= 0 else '📉'} ${net_income:.2f}</h4>
+                                        <h4>{'📈' if net_income >= 0 else '📉'} Rs.{net_income:.2f}</h4>
                                         <p class="mb-0">Net Balance</p>
                                     </div>
                                 </div>
@@ -772,10 +775,10 @@ def analytics():
                 <ul>
             """
             for category, total in income_by_category:
-                html += f"<li>{category}: ${total:.2f}</li>"
+                html += f"<li>{category}: Rs.{total:.2f}</li>"
             html += "</ul><h2>Expenses by Category</h2><ul>"
             for category, total in expense_by_category:
-                html += f"<li>{category}: ${total:.2f}</li>"
+                html += f"<li>{category}: Rs.{total:.2f}</li>"
             html += "</ul></body></html>"
             return html
             
@@ -863,7 +866,7 @@ def profile():
                                 <div class="card text-center h-100">
                                     <div class="card-body">
                                         <i class="fas fa-arrow-up fa-2x text-success mb-2"></i>
-                                        <h4 class="text-success">💰 ${total_income:.2f}</h4>
+                                        <h4 class="text-success">💰 Rs.{total_income:.2f}</h4>
                                         <p class="mb-0">Total Income</p>
                                     </div>
                                 </div>
@@ -872,7 +875,7 @@ def profile():
                                 <div class="card text-center h-100">
                                     <div class="card-body">
                                         <i class="fas fa-arrow-down fa-2x text-danger mb-2"></i>
-                                        <h4 class="text-danger">💸 ${total_expense:.2f}</h4>
+                                        <h4 class="text-danger">💸 Rs.{total_expense:.2f}</h4>
                                         <p class="mb-0">Total Expenses</p>
                                     </div>
                                 </div>
@@ -881,39 +884,8 @@ def profile():
                                 <div class="card text-center h-100">
                                     <div class="card-body">
                                         <i class="fas {'fa-chart-line text-success' if net_balance >= 0 else 'fa-chart-line-down text-warning'} fa-2x mb-2"></i>
-                                        <h4 class="{'text-success' if net_balance >= 0 else 'text-warning'}">{'📈' if net_balance >= 0 else '📉'} ${net_balance:.2f}</h4>
+                                        <h4 class="{'text-success' if net_balance >= 0 else 'text-warning'}">{'📈' if net_balance >= 0 else '📉'} Rs.{net_balance:.2f}</h4>
                                         <p class="mb-0">Net Balance</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Quick Actions -->
-                        <div class="card mb-4">
-                            <div class="card-header">
-                                <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Quick Actions</h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <a href="/dashboard" class="btn btn-primary btn-lg w-100">
-                                            <i class="fas fa-tachometer-alt me-2"></i>Go to Dashboard
-                                        </a>
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <a href="/add_transaction" class="btn btn-success btn-lg w-100">
-                                            <i class="fas fa-plus me-2"></i>Add Transaction
-                                        </a>
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <a href="/transactions" class="btn btn-info btn-lg w-100">
-                                            <i class="fas fa-list me-2"></i>View Transactions
-                                        </a>
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <a href="/analytics" class="btn btn-warning btn-lg w-100">
-                                            <i class="fas fa-chart-bar me-2"></i>View Analytics
-                                        </a>
                                     </div>
                                 </div>
                             </div>
